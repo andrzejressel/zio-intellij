@@ -33,9 +33,9 @@ class SimplifyTapWithZipLeftTest extends ZipLeftInspectionTest(".zipLeft") {
     }
     val result = z {
       """ZIO.succeed("Remedios Varo").zipLeft {
-        | x
-        | x
-        | x
+        |  x
+        |  x
+        |  x
         |}""".stripMargin
     }
     testQuickFix(text, result, hint)

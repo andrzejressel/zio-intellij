@@ -45,16 +45,16 @@ class SimplifyEqualToTypeTest extends SimplifyAssertInspectionTest {
     test("assert(a)(isNull)", "assertTrue(a == null)")
 
   def test_isTrue() =
-    test("assert(List(1,2,3).isEmpty)(isTrue)", "assertTrue(List(1,2,3).isEmpty)")
+    test("assert(List(1,2,3).isEmpty)(isTrue)", "assertTrue(List(1, 2, 3).isEmpty)")
 
   def test_isFalse() =
-    test("assert(List(1,2,3).isEmpty)(isFalse)", "assertTrue(!(List(1,2,3).isEmpty))")
+    test("assert(List(1,2,3).isEmpty)(isFalse)", "assertTrue(!(List(1, 2, 3).isEmpty))")
 
   def test_contains_non_iterable() =
     z(s"""${START}assert("abc")(contains("a"))$END""").assertNotHighlighted()
 
   def test_contains_iterable() =
-    test("assert(List(1,2,3))(contains(2))", "assertTrue(List(1,2,3).contains(2))")
+    test("assert(List(1,2,3))(contains(2))", "assertTrue(List(1, 2, 3).contains(2))")
 
   def test_containsString_non_string() =
     z(s"""${START}assert(List("a"))(containsString("a"))$END""").assertNotHighlighted()
@@ -66,19 +66,19 @@ class SimplifyEqualToTypeTest extends SimplifyAssertInspectionTest {
     z(s"""${START}assert("abc")(exists(equalTo("a")))$END""").assertNotHighlighted()
 
   def test_exists_anything() =
-    test("assert(List(1,2,3))(exists(anything))", "assertTrue(List(1,2,3).nonEmpty)")
+    test("assert(List(1,2,3))(exists(anything))", "assertTrue(List(1, 2, 3).nonEmpty)")
 
   def test_exists_equalTo() =
-    test("assert(List(1,2,3))(exists(equalTo(2)))", "assertTrue(List(1,2,3).contains(2))")
+    test("assert(List(1,2,3))(exists(equalTo(2)))", "assertTrue(List(1, 2, 3).contains(2))")
 
   def test_exists_expr() =
-    test("assert(List(1,2,3))(exists(isGreaterThanEqualTo(2)))", "assertTrue(List(1,2,3).exists(_ >= 2))")
+    test("assert(List(1,2,3))(exists(isGreaterThanEqualTo(2)))", "assertTrue(List(1, 2, 3).exists(_ >= 2))")
 
   def test_startsWith_non_seq() =
     z(s"""${START}assert("abc")(startsWith("ab"))$END""").assertNotHighlighted()
 
   def test_startsWith() =
-    test("assert(List(1,2,3))(startsWith(List(1,2)))", "assertTrue(List(1,2,3).startsWith(List(1,2)))")
+    test("assert(List(1,2,3))(startsWith(List(1,2)))", "assertTrue(List(1, 2, 3).startsWith(List(1, 2)))")
 
   def test_startsWithString_non_string() =
     z(s"""${START}assert(List("abc"))(startsWithString(List("ab")))$END""").assertNotHighlighted()
@@ -105,7 +105,7 @@ class SimplifyEqualToTypeTest extends SimplifyAssertInspectionTest {
     test("""assert(1)(isPositive)""", """assertTrue(1 > 0)""")
 
   def test_isNonEmpty() =
-    test("""assert(List(1,3))(isNonEmpty)""", """assertTrue(List(1,3).nonEmpty)""")
+    test("""assert(List(1,3))(isNonEmpty)""", """assertTrue(List(1, 3).nonEmpty)""")
 
   def test_isNaNDouble() =
     test("""assert(1.0d)(isNaNDouble)""", """assertTrue(1.0d.isNaN)""")

@@ -19,6 +19,7 @@ import com.intellij.application.options.CodeStyle;
 import com.intellij.lang.Language;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.psi.codeStyle.CodeStyleSettings;
@@ -42,6 +43,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.intellij.openapi.util.io.FileUtil.loadFileText;
@@ -69,17 +72,17 @@ public abstract class ScalaFileSetTestCase extends TestSuite {
         return false;
     }
 
-    private Test constructTestCase(File file) {
+    protected Test constructTestCase(File file) {
         if (needsSdk())
             return new ActualTest(file);
         return new NoSdkTestCase(file);
     }
 
-    protected void setUp(@NotNull Project project) {
+    public void setUp(@NotNull Project project) {
         setSettings(project);
     }
 
-    protected void tearDown(@NotNull Project project) {
+    public void tearDown(@NotNull Project project) {
     }
 
     @NotNull
@@ -95,14 +98,8 @@ public abstract class ScalaFileSetTestCase extends TestSuite {
     //used just to propagate to ActualTest.supportedIn
     //default implementation took from org.jetbrains.plugins.scala.base.ScalaSdkOwner.supportedIn
     //TODO: consider using Scala 2.13 by default
-    protected boolean supportedInScalaVersion(ScalaVersion version) {
+    public boolean supportedInScalaVersion(ScalaVersion version) {
         return true;
-    }
-
-    @NotNull
-    @Override
-    public final String getName() {
-        return getClass().getName();
     }
 
     protected void setSettings(@NotNull Project project) {
@@ -134,52 +131,38 @@ public abstract class ScalaFileSetTestCase extends TestSuite {
         return text;
     }
 
-    protected void runTest(@NotNull final String testName0,
-                           @NotNull final String content0,
+    // Notice that it doesn't include the new line before and after the line with the "----" separator
+    private static final Pattern FILE_PARTS_SEPARATOR_PATTERN = Pattern.compile("\\n?(?m)^-{4,}\\n?");
+
+    /**
+     * @return a list of sections from the test file, split by dashes and trimmed
+     */
+    protected final List<String> parseTestFileText(String textFileText) {
+        // with the "limit =-1" argument, an empty content after the separator (including the new line)
+        // will be treated as an empty string ""
+        String[] parts = FILE_PARTS_SEPARATOR_PATTERN.split(StringUtil.convertLineSeparators(textFileText), -1);
+        return Arrays.stream(parts).collect(Collectors.toList());
+    }
+    
+    protected void runTest(@NotNull final String testName,
+                           @NotNull final String testFileText,
                            @NotNull final Project project) {
-        final List<String> input = new ArrayList<>();
+        List<String> fileParts = parseTestFileText(testFileText);
 
-        int separatorIndex;
-        // Adding input  before -----
-        String content = content0;
-        while ((separatorIndex = content.indexOf("-----")) >= 0) {
-            input.add(content.substring(0, separatorIndex - 1));
-            content = content.substring(separatorIndex);
-            while (startsWithChar(content, '-') ||
-                    startsWithChar(content, '\n')) {
-                content = content.substring(1);
-            }
-        }
+        assertTrue("Test file should have at least two sections separated with ----", fileParts.size() > 1);
 
-        // Result - after -----
-        String result = content;
-        while (startsWithChar(result, '-') ||
-                startsWithChar(result, '\n') ||
-                startsWithChar(result, '\r')) {
-            result = result.substring(1);
-        }
+        final String inputRaw = fileParts.get(0);
+        final String expectedResultRaw = fileParts.get(fileParts.size() - 1);
 
-        if (result.trim().equalsIgnoreCase("UNCHANGED_TAG")) {
-            assertEquals("Unchanged expected result expects only 1 input entry", 1, input.size());
-            result = input.get(0);
-        }
+        final String testNameWithoutDot = testName.split("\\.")[0];
 
-        assertFalse("No data found in source file", input.isEmpty());
-        assertNotNull(result);
-
-        final String testName;
-        final int dotIdx = testName0.indexOf('.');
-        testName = dotIdx >= 0 ? testName0.substring(0, dotIdx) : testName0;
-
-        String temp = transform(testName, input.get(0), project);
-        result = transformExpectedResult(result.trim());
-
-        final String transformed = convertLineSeparators(temp).trim();
+        final String actualResult = transform(testNameWithoutDot, inputRaw, project).trim();
+        final String expectedResult = transformExpectedResult(expectedResultRaw).trim();
 
         if (shouldPass()) {
-            assertEquals(result, transformed);
+            assertEquals(expectedResult, actualResult);
         } else {
-            assertNotEquals(result, transformed);
+            assertNotEquals(expectedResult, actualResult);
         }
     }
 
@@ -187,7 +170,7 @@ public abstract class ScalaFileSetTestCase extends TestSuite {
         return true;
     }
 
-    @SuppressWarnings("UnconstructableJUnitTestCase")
+    @SuppressWarnings("JUnitMalformedDeclaration")
     @Category({FileSetTests.class})
     private final class NoSdkTestCase extends LightJavaCodeInsightFixtureTestCase {
         private final File testFile;
@@ -217,12 +200,13 @@ public abstract class ScalaFileSetTestCase extends TestSuite {
             try {
                 ScalaFileSetTestCase.this.runTest(
                         testFile.getName(),
-                        convertLineSeparators(fileText),
+                        StringUtil.convertLineSeparators(fileText),
                         getProject()
                 );
             } catch(Throwable error) {
-                // to be able to Ctrl + Click in console to nabigate to test file on failure
-                // (note, can not work with Android plugin disabled, see IDEA-257969)
+                // to be able to navigate to the original test file location on test failure
+                // (you can use Ctrl/Cmd + Click in the console)
+                // (note, might not work with Android plugin disabled, see IDEA-257969)
                 System.err.println("### Test file: " + testFile.getAbsolutePath());
                 throw error;
             }
@@ -246,7 +230,7 @@ public abstract class ScalaFileSetTestCase extends TestSuite {
         }
     }
 
-    @SuppressWarnings("UnconstructableJUnitTestCase")
+    @SuppressWarnings("JUnitMalformedDeclaration")
     @Category({FileSetTests.class})
     private final class ActualTest extends ScalaLightCodeInsightFixtureTestCase {
 
@@ -266,7 +250,6 @@ public abstract class ScalaFileSetTestCase extends TestSuite {
             try {
                 super.setUp();
                 ScalaFileSetTestCase.this.setUp(getProject());
-                TestUtils.disableTimerThread();
             } catch (Exception e) {
                 try {
                     tearDown();
@@ -291,12 +274,13 @@ public abstract class ScalaFileSetTestCase extends TestSuite {
             try {
                 ScalaFileSetTestCase.this.runTest(
                         myTestFile.getName(),
-                        convertLineSeparators(fileText),
+                        StringUtil.convertLineSeparators(fileText),
                         getProject()
                 );
             } catch(Throwable error) {
-                // to be able to Ctrl + Click in console to nabigate to test file on failure
-                // (note, can not work with Android plugin disabled, see IDEA-257969)
+                // to be able to navigate to the original test file location on test failure
+                // (you can use Ctrl/Cmd + Click in the console)
+                // (note, might not work with Android plugin disabled, see IDEA-257969)
                 System.err.println("### Test file: " + myTestFile.getAbsolutePath());
                 throw error;
             }
@@ -317,7 +301,12 @@ public abstract class ScalaFileSetTestCase extends TestSuite {
         @NotNull
         @Override
         public String getName() {
-            return myTestFile.getAbsolutePath();
+            final var name = myTestFile.getName();
+            final var dotIndex = name.lastIndexOf('.');
+            if (dotIndex == -1) {
+                return name;
+            }
+            return name.substring(0, dotIndex);
         }
     }
 

@@ -35,6 +35,17 @@ abstract class SimplifyForeachInspectionTest[S <: ZInspection: ClassTag](
        |    } yield ()
        |}""".stripMargin
 
+  // same as above, but padded with extra spacing because tests do a string comparison...
+  private val zioForBlockMethodToReplaceWith =
+    s"""ZIO.$methodToReplaceWith$nParamList(myIterable) {
+       |    it =>
+       |      println(it)
+       |      for {
+       |        _ <- ZIO.fail(???)
+       |      } yield ()
+       |  }""".stripMargin
+
+
   override protected val hint: String = s"Replace with ZIO.$methodToReplaceWith"
 
   override protected def isZIO1: Boolean = isZIO1Test
@@ -81,7 +92,7 @@ abstract class SimplifyForeachInspectionTest[S <: ZInspection: ClassTag](
     val result = z {
       s"""val myIterable: Iterable[String] = ???
          |for {
-         |  _ <- $zioBlockMethodToReplaceWith
+         |  _ <- $zioForBlockMethodToReplaceWith
          |} yield ???""".stripMargin
     }
     testQuickFix(text, result, hint)
@@ -152,7 +163,7 @@ abstract class SimplifyForeachInspectionTest[S <: ZInspection: ClassTag](
          |  _ <- b
          |  _ <- $zioMethodToReplaceWith
          |  _ <- b
-         |  _ <- $zioBlockMethodToReplaceWith
+         |  _ <- $zioForBlockMethodToReplaceWith
          |  _ <- b
          |} yield ???""".stripMargin
     }

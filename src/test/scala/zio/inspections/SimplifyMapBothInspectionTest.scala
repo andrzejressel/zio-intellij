@@ -43,12 +43,12 @@ class SimplifyMapBothInspectionTest extends ZSimplifyInspectionTest[SimplifyMapB
         |    b
         |    b
         |    b
-        |  }, {
+        |}, {
         |  a =>
         |    a
         |    a
         |    a
-        |  })""".stripMargin
+        |})""".stripMargin
     }
     testQuickFix(text, result, hint)
   }
@@ -86,10 +86,10 @@ class SimplifyMapBothInspectionTest extends ZSimplifyInspectionTest[SimplifyMapB
     val result = z {
       """ZIO.succeed(42).mapBoth({
         |  _ => {
-        |      b
-        |      b
-        |      b
-        |    }
+        |    b
+        |    b
+        |    b
+        |  }
         |}, {
         |  a =>
         |    a
@@ -185,10 +185,10 @@ class SimplifyMapBothInspectionTest extends ZSimplifyInspectionTest[SimplifyMapB
         |  }
         |}, {
         |  _ => {
-        |      a
-        |      a
-        |      a
-        |    }
+        |    a
+        |    a
+        |    a
+        |  }
         |})""".stripMargin
     }
     testQuickFix(text, result, hint)
@@ -275,10 +275,10 @@ class SimplifyMapBothInspectionTest extends ZSimplifyInspectionTest[SimplifyMapB
         |  a
         |}, {
         |  _ => {
-        |      b
-        |      b
-        |      b
-        |    }
+        |    b
+        |    b
+        |    b
+        |  }
         |})""".stripMargin
     }
     testQuickFix(text, result, hint)
@@ -316,7 +316,7 @@ class SimplifyMapBothInspectionTest extends ZSimplifyInspectionTest[SimplifyMapB
     }
     val result = z {
       """ZIO.succeed(42).mapBoth({
-        | _ => {
+        |  _ => {
         |    a
         |    a
         |    a
@@ -364,16 +364,16 @@ class SimplifyMapBothInspectionTest extends ZSimplifyInspectionTest[SimplifyMapB
     val result = z {
       """ZIO.succeed(42).mapBoth({
         |  _ => {
-        |      a
-        |      a
-        |      a
-        |    }
+        |    a
+        |    a
+        |    a
+        |  }
         |}, {
         |  _ => {
-        |      b
-        |      b
-        |      b
-        |    }
+        |    b
+        |    b
+        |    b
+        |  }
         |})""".stripMargin
     }
     testQuickFix(text, result, hint)

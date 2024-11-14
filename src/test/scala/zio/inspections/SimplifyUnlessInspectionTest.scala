@@ -95,6 +95,7 @@ abstract class SimplifyUnlessInspectionTestBase(replaceWith: String, `ZIO.unless
     def base(expr: String): String =
       s"""|val a = true
           |def b(one: Int, two: Int, three: Int) = ZIO.succeed(42)
+          |
           |$expr""".stripMargin
     val methodCall = "b(1, 2, 3)"
 
@@ -169,8 +170,8 @@ class SimplifyUnlessInspectionTest
 
     val complexExpr =
       """for {
-        | i <- ZIO.succeed(42)
-        | s <- ZIO.succeed("wrap this")
+        |  i <- ZIO.succeed(42)
+        |  s <- ZIO.succeed("wrap this")
         |} yield s * i""".stripMargin
 
     locally {
@@ -220,9 +221,9 @@ class SimplifyZIOUnlessInspectionTest
 
     val complexExpr =
       """for {
-        | i <- ZIO.succeed(42)
-        | s <- ZIO.succeed("wrap this")
-        |} yield s * i""".stripMargin
+        |    i <- ZIO.succeed(42)
+        |    s <- ZIO.succeed("wrap this")
+        |  } yield s * i""".stripMargin
 
     locally {
       z(base(s"${START}if (a) ZIO.unit else $complexExpr$END")).assertHighlighted()

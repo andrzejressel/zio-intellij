@@ -33,9 +33,9 @@ class SimplifyFlatmapWithZipRightTest extends ZipRightInspectionTest(".zipRight"
     }
     val result = z {
       """ZIO.succeed("Remedios Varo").zipRight {
-        | x
-        | x
-        | x
+        |  x
+        |  x
+        |  x
         |}""".stripMargin
     }
     testQuickFix(text, result, hint)

@@ -49,6 +49,7 @@ abstract class SimplifyErrorRecoveryInspectionTest(toReplace: String, toReplaceW
     }
     val result = z {
       s"""def foo = UIO(1)
+         |
          |foo.$methodToReplaceWith""".stripMargin
     }
     testQuickFix(text, result, hint)

@@ -15,6 +15,7 @@ abstract class SimplifyErrorSeparationInspectionTest(toReplace: String, toReplac
   private def zdef(s: String): String = z {
     s"""
        |def foo(el: Any) = UIO(el)
+       |
        |$s
        |""".stripMargin
   }
@@ -22,6 +23,7 @@ abstract class SimplifyErrorSeparationInspectionTest(toReplace: String, toReplac
   private def zval(s: String): String = z {
     s"""
        |val foo: Any => UIO[Any] = el => UIO(el)
+       |
        |$s
        |""".stripMargin
   }

@@ -95,6 +95,7 @@ abstract class SimplifyWhenInspectionTestBase(replaceWith: String, `ZIO.when`: S
     def base(expr: String): String =
       s"""|val a = true
           |def b(one: Int, two: Int, three: Int) = ZIO.succeed(42)
+          |
           |$expr""".stripMargin
     val methodCall = "b(1, 2, 3)"
 
@@ -168,8 +169,8 @@ class SimplifyWhenInspectionTest extends SimplifyWhenInspectionTestBase(".when",
 
     val complexExpr =
       """for {
-        | i <- ZIO.succeed(42)
-        | s <- ZIO.succeed("wrap this")
+        |  i <- ZIO.succeed(42)
+        |  s <- ZIO.succeed("wrap this")
         |} yield s * i""".stripMargin
 
     locally {
@@ -220,9 +221,9 @@ class SimplifyZIOWhenInspectionTest
 
     val complexExpr =
       """for {
-        | i <- ZIO.succeed(42)
-        | s <- ZIO.succeed("wrap this")
-        |} yield s * i""".stripMargin
+        |    i <- ZIO.succeed(42)
+        |    s <- ZIO.succeed("wrap this")
+        |  } yield s * i""".stripMargin
 
     locally {
       z(base(s"${START}if (a) $complexExpr else ZIO.unit$END")).assertHighlighted()

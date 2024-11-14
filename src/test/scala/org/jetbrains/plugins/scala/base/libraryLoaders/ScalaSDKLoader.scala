@@ -18,17 +18,17 @@ import java.io.File
  * @param includeScalaLibraryTransitiveDependencies for scala 3 library, also includes scala 2 library
  */
 case class ScalaSDKLoader(
-                           includeScalaReflectIntoCompilerClasspath: Boolean = false,
-                           //TODO: drop this parameter and fix tests
-                           includeScalaCompilerIntoLibraryClasspath: Boolean = false,
-                           includeScalaLibraryTransitiveDependencies: Boolean = true,
-                           includeScalaLibraryFilesInSdk: Boolean = true,
-                           //TODO: by default sources are not needed in all tests
-                           // make it "false" by default, check which tests fail and set it to true in those tests
-                           includeScalaLibrarySources: Boolean = true,
-                           compilerBridgeBinaryJar: Option[File] = None,
-                           dependencyManager: DependencyManagerBase = DependencyManager
-                         ) extends LibraryLoader {
+  includeScalaReflectIntoCompilerClasspath: Boolean = false,
+  //TODO: drop this parameter and fix tests
+  includeScalaCompilerIntoLibraryClasspath: Boolean = false,
+  includeScalaLibraryTransitiveDependencies: Boolean = true,
+  includeScalaLibraryFilesInSdk: Boolean = true,
+  //TODO: by default sources are not needed in all tests
+  // make it "false" by default, check which tests fail and set it to true in those tests
+  includeScalaLibrarySources: Boolean = true,
+  compilerBridgeBinaryJar: Option[File] = None,
+  dependencyManager: DependencyManagerBase = DependencyManager
+) extends LibraryLoader {
 
   import DependencyManagerBase._
   import ScalaSDKLoader._

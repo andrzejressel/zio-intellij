@@ -6,7 +6,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.projectRoots.impl.JavaAwareProjectJdkTableImpl
 import com.intellij.openapi.projectRoots.{JavaSdk, JavaSdkVersion, Sdk}
-import com.intellij.openapi.roots.ModuleRootModificationUtil
+import com.intellij.openapi.roots.{ModuleRootModificationUtil, OrderRootType}
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.pom.java.LanguageLevel
@@ -82,6 +82,55 @@ object SmartJDKLoader {
       }
       jdk
     }
+  }
+
+  def createJdk(languageLevel: LanguageLevel): Sdk = {
+    val jdkVersion = JavaSdkVersion.fromLanguageLevel(languageLevel)
+    val jdkName = jdkVersion.getDescription
+    createNewJdk(jdkVersion, jdkName)
+  }
+
+  /**
+   * Creates a JDK that contains classes from the specified modules without registering it to the ProjectJdkTable.
+   * Useful in subclasses of [[ScalaLightCodeInsightFixtureTestCase]] which require more classes than the mock JDKs
+   * contain.
+   *
+   * @note [[ScalaLightCodeInsightFixtureTestCase]] automatically registers the project SDK to the JDK table.
+   */
+  def createFilteredJdk(
+    languageLevel: LanguageLevel,
+    jdkModuleNames: Seq[String],
+    includeSourcesAndDocs: Boolean = false
+  ): Sdk = {
+    if (languageLevel.isLessThan(LanguageLevel.JDK_1_9)) {
+      throw new IllegalArgumentException("can only create filtered JDKs based on Java 9+")
+    }
+    if (jdkModuleNames.isEmpty) {
+      throw new IllegalArgumentException("jdkModuleNames cannot be empty")
+    }
+
+    val jdkVersion = JavaSdkVersion.fromLanguageLevel(languageLevel)
+    val jdkName = {
+      val description = jdkVersion.getDescription
+      if (jdkModuleNames.isEmpty) description else s"$description-${jdkModuleNames.mkString("{", ",", "}")}"
+    }
+
+    val jdk = createNewJdk(jdkVersion, jdkName)
+    // Create a Java SDK that only contains the classes from the JDK modules provided as a parameter to this method.
+    // E.g. the `java.base` JDK module contains the well-known classes such as `java.lang.Object`,
+    // `java.lang.String`, `java.util.List`, etc...
+    // Having a minimal number of classes in the created SDK significantly speeds up SDK set up and indexing in tests.
+    val modulePaths = jdkModuleNames.map(m => s"/$m")
+    // Keep only classes from the specified modules.
+    val filterFn = (url: String) => modulePaths.exists(url.endsWith)
+    // If sources and docs should be included, keep only sources and docs from the specified modules, otherwise remove all sources and docs.
+    val filterSrcsDocsFn = (url: String) => includeSourcesAndDocs && filterFn(url)
+    val modificator = jdk.getSdkModificator
+    modificator.getUrls(OrderRootType.CLASSES).filterNot(filterFn).foreach(modificator.removeRoot(_, OrderRootType.CLASSES))
+    modificator.getUrls(OrderRootType.SOURCES).filterNot(filterSrcsDocsFn).foreach(modificator.removeRoot(_, OrderRootType.SOURCES))
+    modificator.getUrls(OrderRootType.DOCUMENTATION).filterNot(filterSrcsDocsFn).foreach(modificator.removeRoot(_, OrderRootType.DOCUMENTATION))
+    inWriteAction(modificator.commitChanges())
+    jdk
   }
 
   private def createNewJdk(jdkVersion: JavaSdkVersion, jdkName: String): Sdk = {

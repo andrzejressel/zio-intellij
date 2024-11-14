@@ -16,42 +16,6 @@ import zio.intellij.utils.types._
 
 package object inspections {
 
-  // copied over from the Scala plugin because of some upstream changes
-  // TODO consider removing in the future, replacing with whatever is the new thing
-  // also, renaming from just `invocationText` to ensure using the correct (our) method
-  def invocationTextFor(qual: PsiElement, methName: String, args: ScExpression*): String = {
-    def argsText = argListText(args)
-
-    if (qual == null) {
-      s"$methName$argsText"
-    } else {
-      val qualText = qual.getText
-      qual match {
-        case _ childOf ScInfixExpr(`qual`, _, _) if args.size == 1 =>
-          s"$qualText $methName ${args.head.getText}"
-        case _ childOf ScPostfixExpr(`qual`, _) if args.size == 1 =>
-          s"$qualText $methName ${args.head.getText}"
-        case _: ScInfixExpr => s"($qualText).$methName$argsText"
-        case _: ScFor => s"($qualText).$methName$argsText"
-        case _ => s"$qualText.$methName$argsText"
-      }
-
-    }
-  }
-
-  def argListText(args: Seq[ScExpression]): String = {
-    args match {
-      case Seq(p: ScParenthesisedExpr) => p.getText
-      case Seq(b @ ScBlock(_: ScFunctionExpr)) => b.getText
-      case Seq(ScBlock(stmt: ScBlockStatement)) => s"(${stmt.getText})"
-      case Seq(b: ScBlock) => b.getText
-      case Seq((_: ScFunctionExpr) childOf (b: ScBlockExpr)) => b.getText
-      case Seq(other) => s"(${other.getText})"
-      case seq if seq.size > 1 => seq.map(_.getText).mkString("(", ", ", ")")
-      case _ => ""
-    }
-  }
-
   object collectionMethods {
     private[inspections] val `.map` = invocation("map").from(likeCollectionClasses)
   }
@@ -212,8 +176,9 @@ package object inspections {
 
       def unapply(expr: ScExpression): Option[(ScReferenceExpression, ScExpression)] =
         expr match {
-          case MethodRepr(_, _, Some(ref), Seq(e)) => Some((ref, e))
-          case _                                   => None
+          case MethodRepr(_, _, Some(ref), Seq(e))                        => Some((ref, e))
+          case MethodRepr(_, Some(ref: ScReferenceExpression), _, Seq(e)) => Some((ref, e))
+          case _                                                          => None
         }
     }
 

@@ -1,7 +1,8 @@
 package zio.inspections
 
 import com.intellij.codeInspection.LocalInspectionTool
-import intellij.testfixtures._
+import com.intellij.openapi.util.text.StringUtil
+import org.jetbrains.plugins.scala.DependencyManagerBase._
 import org.jetbrains.plugins.scala.base.libraryLoaders._
 import org.jetbrains.plugins.scala.codeInspection.ScalaInspectionTestBase
 import org.jetbrains.plugins.scala.codeInspection.collections._
@@ -39,8 +40,8 @@ trait ZInspectionTestBase[T <: LocalInspectionTool] { base: ScalaInspectionTestB
        |  def f(a: Any, b: Any): ZIO[Any, Throwable, Unit] = ???
        |
        |  def foo = {
-       |   $s
-       | }
+       |${s.split("\n").map(l => "    " + l).mkString("\n")}
+       |  }
        |}
        |trait Logger {
        |  def log[A](a: A): ZIO[Any, Nothing, Unit]

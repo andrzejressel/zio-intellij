@@ -44,10 +44,12 @@ abstract class SimplifyErrorModificationInspectionTest(toReplace: String, toRepl
   def testDefReplacement(): Unit = {
     val text = z {
       s"""def foo = ZIO.succeed(1)
+         |
          |foo.$methodToReplace""".stripMargin
     }
     val result = z {
       s"""def foo = ZIO.succeed(1)
+         |
          |foo.$methodToReplaceWith""".stripMargin
     }
     testQuickFix(text, result, hint)
