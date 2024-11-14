@@ -1,7 +1,7 @@
 import org.jetbrains.sbtidea.{AutoJbr, JbrPlatform}
 
 lazy val scala213           = "2.13.14"
-lazy val scalaPluginVersion = "2024.3.8"
+lazy val scalaPluginVersion = "2024.3.18"
 lazy val minorVersion       = "0"
 lazy val buildVersion       = sys.env.getOrElse("ZIO_INTELLIJ_BUILD_NUMBER", minorVersion)
 lazy val pluginVersion      = s"2024.3.35.$buildVersion"
@@ -64,6 +64,7 @@ def newProject(projectName: String, base: File): Project =
     scalaVersion := scala213,
     version := pluginVersion,
     libraryDependencies ++= Seq(
+      "junit"             % "junit"             % "4.13.2" % Test,
       "com.github.sbt"    % "junit-interface"   % "0.13.3" % Test,
       "org.junit.jupiter" % "junit-jupiter-api" % "5.11.1" % Test
     ),

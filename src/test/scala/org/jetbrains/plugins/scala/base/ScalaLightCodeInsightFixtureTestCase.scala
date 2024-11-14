@@ -1,7 +1,8 @@
 package org.jetbrains.plugins.scala.base
 
 import com.intellij.application.options.CodeStyle
-import com.intellij.codeInsight.daemon.impl.HighlightInfo
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.codeInsight.daemon.impl.{DaemonCodeAnalyzerImpl, HighlightInfo}
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.module.Module
@@ -13,12 +14,14 @@ import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.psi.codeStyle.{CodeStyleSettings, CommonCodeStyleSettings}
+import com.intellij.testFramework.TestIndexingModeSupporter.IndexingMode
 import com.intellij.testFramework.fixtures.{JavaCodeInsightTestFixture, LightJavaCodeInsightFixtureTestCase}
-import com.intellij.testFramework.{EditorTestUtil, LightProjectDescriptor}
+import com.intellij.testFramework.{EditorTestUtil, IdeaTestUtil, LightProjectDescriptor}
+import com.intellij.util.lang.JavaVersion
 import org.intellij.lang.annotations.Language
 import org.jetbrains.jps.model.java.JavaSourceRootType
-import org.jetbrains.plugins.scala.base.libraryLoaders.{LibraryLoader, ScalaSDKLoader, SmartJDKLoader, SourcesLoader}
-import org.jetbrains.plugins.scala.extensions.StringExt
+import org.jetbrains.plugins.scala.base.libraryLoaders.{LibraryLoader, ScalaSDKLoader, SourcesLoader}
+import org.jetbrains.plugins.scala.extensions.{ObjectExt, StringExt}
 import org.jetbrains.plugins.scala.lang.formatting.settings.ScalaCodeStyleSettings
 import org.jetbrains.plugins.scala.project.settings.ScalaCompilerConfiguration
 import org.jetbrains.plugins.scala.util.TestUtils
@@ -39,23 +42,33 @@ abstract class ScalaLightCodeInsightFixtureTestCase
   protected val START = EditorTestUtil.SELECTION_START_TAG
   protected val END = EditorTestUtil.SELECTION_END_TAG
 
-  protected lazy val scalaFixture: ScalaCodeInsightTestFixture = new ScalaCodeInsightTestFixture(getFixture)
+  // var is needed to pick up updated java fixture in setUp
+  private[this] var _scalaFixture: ScalaCodeInsightTestFixture = _
+  protected def scalaFixture: ScalaCodeInsightTestFixture = _scalaFixture
 
   override def getTestDataPath: String = TestUtils.getTestDataPath + "/"
 
   protected def sourceRootPath: String = null
 
+  //start section: indexing mode setup
+  private[this] var indexingMode: IndexingMode = IndexingMode.SMART
+
+  // SCL-21849
+  override def getIndexingMode: IndexingMode = indexingMode
+  override def setIndexingMode(mode: IndexingMode): Unit = indexingMode = mode
+  //end section: indexing mode setup
+
   //start section: project libraries configuration
   protected def loadScalaLibrary: Boolean = true
 
   protected def includeReflectLibrary: Boolean = false
-
   protected def includeCompilerAsLibrary: Boolean = false
+  protected def includeScalaLibrarySources: Boolean = true
 
   protected def additionalLibraries: Seq[LibraryLoader] = Seq.empty
 
   override protected def librariesLoaders: Seq[LibraryLoader] = {
-    val scalaSdkLoader = ScalaSDKLoader(includeReflectLibrary, includeCompilerAsLibrary)
+    val scalaSdkLoader = ScalaSDKLoader(includeReflectLibrary, includeCompilerAsLibrary, includeScalaLibrarySources = includeScalaLibrarySources)
     //note: do we indeed need to register it as libraries?
     // shouldn't source roots be registered just as source roots?
     val sourceLoaders = Option(sourceRootPath).map(SourcesLoader).toSeq
@@ -68,12 +81,14 @@ abstract class ScalaLightCodeInsightFixtureTestCase
   protected def sharedProjectToken: SharedTestProjectToken =
     SharedTestProjectToken.ByTestClassAndScalaSdkAndProjectLibraries(this)
 
+  protected def projectJdk: Sdk = IdeaTestUtil.getMockJdk(JavaVersion.compose(17))
+
   override protected def getProjectDescriptor: LightProjectDescriptor = new ScalaLightProjectDescriptor(sharedProjectToken) {
     override def tuneModule(module: Module, project: Project): Unit = {
       afterSetUpProject(project, module)
     }
 
-    override def getSdk: Sdk = SmartJDKLoader.getOrCreateJDK()
+    override def getSdk: Sdk = projectJdk
 
     override def getSourceRootType: JavaSourceRootType =
       if (placeSourceFilesInTestContentRoot)
@@ -89,14 +104,11 @@ abstract class ScalaLightCodeInsightFixtureTestCase
    *       test invocations. Look into also overriding [[sharedProjectToken]].
    */
   protected def afterSetUpProject(project: Project, module: Module): Unit = {
-    Registry.get("ast.loading.filter").setValue(true, getTestRootDisposable)
-
     setUpLibraries(module)
   }
 
   override def setUpLibraries(implicit module: Module): Unit = {
     if (loadScalaLibrary) {
-      myFixture.allowTreeAccessForAllFiles()
       super.setUpLibraries(module)
 
       val compilerOptions = additionalCompilerOptions
@@ -125,9 +137,24 @@ abstract class ScalaLightCodeInsightFixtureTestCase
   //end section: project descriptor
 
   override protected def setUp(): Unit = {
+    // initialize indexing mode before java test fixture in super.setUp()
+    /** see also [[com.intellij.testFramework.fixtures.JavaIndexingModeCodeInsightTestFixture]] */
+    indexingMode = this.findIndexingModeAnnotation()
+      .fold(IndexingMode.SMART)(_.mode())
+
     super.setUp()
-    scalaFixture //init fixture lazy val
-    TestUtils.disableTimerThread()
+
+    // pick up updated java fixture after super.setUp()
+    _scalaFixture = new ScalaCodeInsightTestFixture(getFixture)
+
+    // SCL-21849
+    if (getIndexingMode != IndexingMode.SMART) {
+      DaemonCodeAnalyzer.getInstance(getProject())
+        .asOptionOf[DaemonCodeAnalyzerImpl]
+        .foreach(_.mustWaitForSmartMode(false, getTestRootDisposable))
+    }
+
+    Registry.get("ast.loading.filter").setValue(true, getTestRootDisposable)
   }
 
   override protected def tearDown(): Unit = {

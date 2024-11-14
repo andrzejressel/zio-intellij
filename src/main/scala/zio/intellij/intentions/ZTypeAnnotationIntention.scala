@@ -55,10 +55,6 @@ object ZStrategy {
 
       override def variableWithoutType(variable: ScVariableDefinition): Boolean = false
 
-      override def patternWithoutType(pattern: ScBindingPattern): Boolean = false
-
-      override def wildcardPatternWithoutType(pattern: ScWildcardPattern): Boolean = false
-
       override def parameterWithoutType(param: ScParameter): Boolean = false
 
       override def parameterWithType(param: ScParameter): Boolean = false

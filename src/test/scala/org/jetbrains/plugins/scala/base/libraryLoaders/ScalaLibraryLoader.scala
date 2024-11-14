@@ -16,9 +16,9 @@ import java.{util => ju}
  * It doesn't load compiler classpath jars and creates a simple library
  */
 final case class ScalaLibraryLoader(
-  scalaVersion: ScalaVersion,
-  dependencyManager: DependencyManagerBase = DependencyManager
-)
+                                     scalaVersion: ScalaVersion,
+                                     dependencyManager: DependencyManagerBase = DependencyManager
+                                   )
   extends LibraryLoader {
 
   import DependencyManagerBase._
@@ -71,15 +71,15 @@ object ScalaLibraryLoader {
    * It uses separate scala libraries with specified versions
    */
   def libraryLoadersWithSeparateScalaLibraries(
-    superLibraryLoaders: Seq[LibraryLoader],
-    scala2Version: ScalaVersion,
-    scala3Version: ScalaVersion,
-  ): Seq[LibraryLoader] = {
+                                                superLibraryLoaders: Seq[LibraryLoader],
+                                                scala2Version: ScalaVersion,
+                                                scala3Version: ScalaVersion,
+                                              ): Seq[LibraryLoader] = {
     val scala2LibraryLoader = ScalaLibraryLoader(scala2Version)
     val scala3LibraryLoader = ScalaLibraryLoader(scala3Version)
 
     //We use resolveScalaLibraryTransitiveDependencies = false in order to use the latest 2.13.14 RC version
-    val scala3SdkLoader = ScalaSDKLoader(includeLibraryFilesInSdk = false)
+    val scala3SdkLoader = ScalaSDKLoader(includeScalaLibraryFilesInSdk = false)
 
     Seq(
       scala3LibraryLoader,
